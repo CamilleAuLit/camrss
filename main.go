@@ -46,16 +46,16 @@ func NewQuestion(question string) Question {
 }
 
 func NewFeed(link string) (*Feed, error) {
-	var a *gofeed.Item
+	var a string
 	t := ""
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(link)
 	if err != nil {
 		return nil, err
 	}
-	for _, i := range feed.Items {
+	for i := 0; i < len(feed.Items); i++ {
 		t = feed.Title
-		a = i
+		a = a + *gofeed.Item.Content
 	}
 	return &Feed{title: t, article: a}, nil
 }
