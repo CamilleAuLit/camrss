@@ -1,12 +1,18 @@
 package main
 
 import (
+	"github.com/mmcdole/gofeed"
 	"log"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+type Feed struct {
+	title   string
+	article *gofeed.Item
+}
 
 type Styles struct {
 	BorderColor lipgloss.Color
@@ -27,6 +33,7 @@ type model struct {
 	height      int
 	answerField textinput.Model
 	styles      *Styles
+	article     []Feed
 }
 
 type Question struct {
@@ -38,7 +45,22 @@ func NewQuestion(question string) Question {
 	return Question{question: question}
 }
 
-func New(questions []Question) *model {
+func NewFeed(link string) (*Feed, error) {
+	var a *gofeed.Item
+	t := ""
+	fp := gofeed.NewParser()
+	feed, err := fp.ParseURL(link)
+	if err != nil {
+		return nil, err
+	}
+	for _, i := range feed.Items {
+		t = feed.Title
+		a = i
+	}
+	return &Feed{title: t, article: a}, nil
+}
+
+func New(questions []Question, articles []Feed) *model {
 	styles := DefaultStyles()
 	answerField := textinput.New()
 	answerField.Placeholder = "Your answer here"
@@ -48,6 +70,7 @@ func New(questions []Question) *model {
 		questions:   questions,
 		answerField: answerField,
 		styles:      styles,
+		article:     articles,
 	}
 }
 
@@ -81,6 +104,13 @@ func (m model) View() string {
 	if m.width == 0 {
 		return "loading..."
 	}
+
+	var articleArticle string
+
+	if len(m.article) > 0 {
+		articleArticle = m.article[0].article.Content
+	}
+
 	return lipgloss.Place(
 		m.width,
 		m.height,
@@ -88,8 +118,7 @@ func (m model) View() string {
 		lipgloss.Center,
 		lipgloss.JoinVertical(
 			lipgloss.Center,
-			m.questions[m.index].question,
-			m.styles.InputField.Render(m.answerField.View()),
+			articleArticle,
 		),
 	)
 }
@@ -108,8 +137,16 @@ func main() {
 		NewQuestion("What is your favorite editor?"),
 		NewQuestion("What is your wisdom?"),
 	}
-	m := New(questions)
 
+	feedURL := "https://hnrss.org/frontpage"
+	myFeed, err := NewFeed(feedURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	articles := []Feed{*myFeed}
+
+	m := New(questions, articles)
 	f, err := tea.LogToFile("debug.log", "debug")
 
 	if err != nil {
