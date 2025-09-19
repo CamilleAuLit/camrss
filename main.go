@@ -1,17 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"github.com/mmcdole/gofeed"
 	"log"
+	"strings"
 
-	"github.com/charmbracelet/bubbles/textinput"
+	//	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type Feed struct {
 	title   string
-	article *gofeed.Item
+	article string
 }
 
 type Styles struct {
@@ -21,56 +23,32 @@ type Styles struct {
 
 func DefaultStyles() *Styles {
 	s := new(Styles)
-	s.BorderColor = lipgloss.Color("201")
+	s.BorderColor = lipgloss.Color("200")
 	s.InputField = lipgloss.NewStyle().BorderForeground(s.BorderColor).BorderStyle(lipgloss.NormalBorder()).Padding(1).Width(80)
 	return s
 }
 
 type model struct {
-	index       int
-	questions   []Question
-	width       int
-	height      int
-	answerField textinput.Model
-	styles      *Styles
-	article     []Feed
+	width    int
+	height   int
+	styles   *Styles
+	articles []*gofeed.Item
 }
 
-type Question struct {
-	question string
-	answer   string
-}
-
-func NewQuestion(question string) Question {
-	return Question{question: question}
-}
-
-func NewFeed(link string) (*Feed, error) {
-	var a string
-	t := ""
+func GetArticles(link string) ([]*gofeed.Item, error) {
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(link)
 	if err != nil {
 		return nil, err
 	}
-	for i := 0; i < len(feed.Items); i++ {
-		t = feed.Title
-		a = a + *gofeed.Item.Content
-	}
-	return &Feed{title: t, article: a}, nil
+	return feed.Items, nil
 }
 
-func New(questions []Question, articles []Feed) *model {
+func New(articles []*gofeed.Item) *model {
 	styles := DefaultStyles()
-	answerField := textinput.New()
-	answerField.Placeholder = "Your answer here"
-	answerField.Focus()
-
 	return &model{
-		questions:   questions,
-		answerField: answerField,
-		styles:      styles,
-		article:     articles,
+		styles:   styles,
+		articles: articles,
 	}
 }
 
@@ -80,23 +58,18 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	current := m.questions[m.index]
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c":
+		case "q":
 			return m, tea.Quit
 		case "enter":
-			current.answer = m.answerField.Value()
-			m.answerField.SetValue("")
-			m.Next()
 			return m, nil
 		}
 	}
-	m.answerField, cmd = m.answerField.Update(msg)
 	return m, cmd
 }
 
@@ -105,10 +78,14 @@ func (m model) View() string {
 		return "loading..."
 	}
 
-	var articleArticle string
+	var b strings.Builder
 
-	if len(m.article) > 0 {
-		articleArticle = m.article[0].article.Content
+	for i, article := range m.articles {
+		b.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("%d. %s\n", i+1, article.Title)))
+		b.WriteString("\n")
+		b.WriteString(article.Content)
+		b.WriteString("\n\n")
+
 	}
 
 	return lipgloss.Place(
@@ -118,35 +95,19 @@ func (m model) View() string {
 		lipgloss.Center,
 		lipgloss.JoinVertical(
 			lipgloss.Center,
-			articleArticle,
+			b.String(),
 		),
 	)
 }
 
-func (m *model) Next() {
-	if m.index < len(m.questions)-1 {
-		m.index++
-	} else {
-		m.index = 0
-	}
-}
-
 func main() {
-	questions := []Question{
-		NewQuestion("What is your name?"),
-		NewQuestion("What is your favorite editor?"),
-		NewQuestion("What is your wisdom?"),
-	}
-
 	feedURL := "https://hnrss.org/frontpage"
-	myFeed, err := NewFeed(feedURL)
+	items, err := GetArticles(feedURL)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	articles := []Feed{*myFeed}
-
-	m := New(questions, articles)
+	m := New(items)
 	f, err := tea.LogToFile("debug.log", "debug")
 
 	if err != nil {

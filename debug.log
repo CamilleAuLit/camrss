@@ -3,3 +3,4 @@ debug 2025/09/17 17:10:29 err: &{%!W(string=program was killed: program experien
 debug 2025/09/17 18:03:59 err: &{%!W(string=program was killed: program experienced a panic) [%!W(*errors.errorString=&{program was killed}) %!W(*errors.errorString=&{program experienced a panic})]}
 debug 2025/09/17 18:08:07 err: &{%!W(string=program was killed: program experienced a panic) [%!W(*errors.errorString=&{program was killed}) %!W(*errors.errorString=&{program experienced a panic})]}
 debug 2025/09/17 21:07:51 err: &{%!W(string=program was killed: program experienced a panic) [%!W(*errors.errorString=&{program was killed}) %!W(*errors.errorString=&{program experienced a panic})]}
+debug 2025/09/18 09:45:16 err: &{%!W(string=program was killed: program experienced a panic) [%!W(*errors.errorString=&{program was killed}) %!W(*errors.errorString=&{program experienced a panic})]}
